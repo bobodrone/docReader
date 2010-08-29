@@ -2,7 +2,7 @@
 
 docReader provides an formatter to the CCK module Filefield. When enabled and used as a formatter, this module outputs a second link next the normal one that you normally would see in filefield. The second link goto Readspeakers docReader page that are able to read the text for you with a computerized/recorded voice in a vareity of languages. You will need an account at Readspekaer to use this service.
 
-FileField was written by Fredric Bergström (bobodrone).
+docReader was written by Fredric Bergström (bobodrone).
 
 
 Dependencies:
