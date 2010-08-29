@@ -1,0 +1,8 @@
+; $Id:
+name = DocReader
+description = Integrate <a href="http://www.readspeaker.com/content/readspeaker-docreader">docReader</a> with filefield as an formatter.
+dependencies[] = content
+dependencies[] = filefield
+core = 6.x
+version = 6.x-1.0-dev
+package = CCK

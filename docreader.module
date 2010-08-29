@@ -1,0 +1,236 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   Integrate docReader with filefield as an formatter.
+ *
+ * @author Fredric Bergström (bobodrone) <fredric@nodeone.se>
+ */
+
+/**
+ * Implements hook_init().
+ *
+ * Load required includes.
+ */
+function docreader_init() {
+  module_load_include('inc', 'filefield', 'filefield_formatter');
+  drupal_add_css(drupal_get_path('module', 'docreader') . '/docreader.css', 'module');
+}
+
+/**
+ * Implements hook_theme().
+ */
+function docreader_theme() {
+  return array(
+    'docreader_file' => array(
+      'arguments' => array('file' => NULL),
+    ),
+    'docreader_formatter_docreader' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'docreader_item' => array(
+      'arguments' => array('file' => NULL, 'field' => NULL),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function docreader_menu() {
+  $items = array();
+  $items['admin/settings/docreader'] = array(
+    'title' => 'docReader settings',
+    'description' => 'Settings for customer id etc',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('docreader_settings'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function docreader_field_formatter_info() {
+  return array(
+    'docreader' => array(
+      'label' => t('docReader files'),
+      'field types' => array('filefield'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+      'description' => t('Displays all kinds of files with an icon and a linked file description.'),
+    ),
+  );
+}
+
+/**
+ * Theme function for the docreader-filefield formatter.
+ */
+function theme_docreader_formatter_docreader($element) {
+  $file = $element['#item'];
+  $field = content_fields($element['#field_name']);
+  $output = theme('docreader_item', $file, $field);
+  return $output;
+}
+
+/**
+ * Theme function for any file that is managed by FileField.
+ */
+function theme_docreader_item($file, $field) {
+  if (filefield_view_access($field['field_name'], node_load($file['nid'])) && filefield_file_listed($file, $field)) {
+    return theme('docreader_file', $file);
+  }
+  return '';
+}
+
+/**
+ * Theme function for the 'generic' single file formatter.
+ */
+function theme_docreader_file($file) {
+  // Views may call this function with a NULL value, return an empty string.
+  if (empty($file['fid'])) {
+    return '';
+  }
+
+  $path = $file['filepath'];
+  $url = file_create_url($path);
+  $icon = theme('filefield_icon', $file);
+
+  $options = array(
+    'attributes' => array(
+      'type' => $file['filemime'] . '; length=' . $file['filesize'],
+    ),
+  );
+
+  // Use the description as the link text if available.
+  if (empty($file['data']['description'])) {
+    $link_text = $file['filename'];
+  }
+  else {
+    $link_text = $file['data']['description'];
+    $options['attributes']['title'] = $file['filename'];
+  }
+
+  // docReader addon to filefield output:
+
+  // if !strict then print out target=_blank.
+  $target = array();
+  if (!in_array(check_plain(variable_get('docreader_doctype', NULL)), array('HTML 4.01 Strict', 'XHTML 1.0 Strict'))) {
+    $target = array('target' => '_blank');
+  }
+
+  // Add attributes to link, merge with target='_blank' if set.
+  $docReaderAttr = array_merge(array('onclick' => 'window.open(this.href); return false;',
+                                     'title' => 'Open this document with ReadSpeaker docReader',
+                                     'class' => 'docreader-link'), $target);
+
+  // Get customer id from settings.
+  $customerId = check_plain(variable_get('docreader_cid', NULL));
+
+  // Get voice language from settings.
+  $docReaderLang = check_plain(variable_get('docreader_lang', NULL));
+
+  // Get custom link image if set, else use default image in module folder.
+  if (!$docReaderImage = check_plain(variable_get('docreader_img', NULL))) $docReaderImage = drupal_get_path('module', 'docreader') . '/images/icon_16px.gif';
+
+  // Create html link with image, link text and all attributes.
+  $docReaderLink = l(theme('image', $docReaderImage, 'docReader', 'docReader', array(
+    'class' => 'docreader-img')) . t('Listen'), 'http://docreader.readspeaker.com/docreader', array(
+    'html' => TRUE,
+    'query' => array(
+      'cid' => $customerId,
+      'lang' => $docReaderLang,
+      'url' => $url),
+    'attributes' => $docReaderAttr));
+
+  return '<div class="docreader filefield-file clear-block">' . $icon . l($link_text, $url, $options) . $docReaderLink . '</div>';
+}
+
+/**
+ * docReader settings form.
+ */
+function docreader_settings() {
+  // Show/hide checkbox with brittish english only show when select option =en_us is selected.
+  drupal_add_js(drupal_get_path('module', 'docreader') . '/scripts/docreader.js', 'module');
+
+  $form = array();
+
+  $doctype_options = drupal_map_assoc(array('HTML 4.01 Transitional', 'HTML 4.01 Strict', 'XHTML 1.0 Transitional', 'XHTML 1.0 Strict'));
+  $form['docreader_doctype'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose DOCTYPE'),
+    '#default_value' => variable_get('docreader_doctype', 'XHTML 1.0 Strict'),
+    '#options' => $doctype_options,
+    '#description' => t('The DOCTYPE of this installation of Drupal.'),
+  );
+
+  $form['docreader_cid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Enter your docReader ID'),
+    '#default_value' => variable_get('docreader_cid', ''),
+    '#size' => 5,
+    '#maxlength' => 5,
+    '#description' => t('Enter your docReader ID from <a href="@url">@url</a>', array('@url' => 'https:/app.readspeaker.com/portal')),
+    '#required' => FALSE,
+  );
+
+  $form['docreader_lang'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose Language'),
+    '#default_value' => variable_get('docreader_lang', 'sv_se'),
+    '#options' => docreader_language_list(),
+    '#description' => t('The voice language.'),
+  );
+
+  $form['docreader_prefer_uk'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Prefer british english'),
+    '#default_value' => variable_get('docreader_prefer_uk', FALSE),
+    '#description' => t('Check this option, if you prefer british english.'),
+    '#required' => FALSE,
+  );
+
+  $form['docreader_img'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Custom link image'),
+    '#default_value' => variable_get('docreader_img', ''),
+    '#size' => 45,
+    '#maxlength' => 255,
+    '#description' => t('Path to an own image to show next to the file icon. For the default image, leave the field blank.'),
+    '#required' => FALSE,
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Validates docReader settings form.
+ */
+function docreader_settings_validate($form, &$form_state) {
+  // Check if file exists in given path and is an image of type gif, jpeg or png.
+  if ($form_state['values']['docreader_img']) {
+    clearstatcache();
+    $imgfiles = array(IMAGETYPE_GIF, IMAGETYPE_JPEG, IMAGETYPE_PNG);
+    if (!file_exists($form_state['values']['docreader_img']) ||
+        !in_array(exif_imagetype($form_state['values']['docreader_img']), $imgfiles)) {
+      form_set_error('docreader_img', t('The file could not be found or is not an image file!'));
+    }
+  }
+}
+
+function docreader_language_list() {
+
+  $docreader_languages = array('de_de' => 'German', 
+    'el_gr' => 'Greek',
+    'en_us' => 'English',
+    'es_es' => 'Spanish',
+    'fr_fr' => 'French',
+    'nl_nl' => 'Dutch',
+    'no_nb' => 'Norwegian',
+    'it_it' => 'Italian',
+    'pt_pt' => 'Polish',
+    'sv_se' => 'Swedish');
+  return $docreader_languages;
+}
