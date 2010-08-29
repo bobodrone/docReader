@@ -15,7 +15,7 @@
  */
 function docreader_init() {
   module_load_include('inc', 'filefield', 'filefield_formatter');
-  drupal_add_css(drupal_get_path('module', 'docreader') . '/docreader.css', 'module');
+  drupal_add_css(drupal_get_path('module', 'docreader') . '/css/docreader.css', 'module');
 }
 
 /**
