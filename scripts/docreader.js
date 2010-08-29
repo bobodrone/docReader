@@ -1,3 +1,5 @@
+// $Id$
+
 $(document).ready(function() {
   var checkboxattr = $('#edit-docreader-prefer-uk').attr('checked');
 
