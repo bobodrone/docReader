@@ -220,6 +220,11 @@ function docreader_settings_validate($form, &$form_state) {
   }
 }
 
+/**
+ * These are the languages currently supported by the docReader service.
+ * The format of the key [required by the docReader service] is a combination of ISO 639 (language) and ISO 3166 (country).
+ * This is to make it possible to have amerian english accent (en_us) and brittish english accent and so on.
+ */
 function docreader_language_list() {
 
   $docreader_languages = array('de_de' => 'German', 
