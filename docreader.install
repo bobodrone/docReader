@@ -1,0 +1,14 @@
+<?php
+// $Id$
+
+/**
+ * Implements hook_uninstall().
+ * Removes all variables.
+ */
+function docreader_uninstall() {
+  variable_del('docreader_doctype');
+  variable_del('docreader_cid');
+  variable_del('docreader_lang');
+  variable_del('docreader_prefer_uk');
+  variable_del('docreader_img');
+}
